@@ -5,7 +5,6 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 /** Builds the widget's looks. The settings preview uses the same code, so they match. */
 final class WidgetViews {
@@ -27,11 +26,9 @@ final class WidgetViews {
         return v;
     }
 
-    /** Wheel with the app at `offset` in the middle. `click` sets up each slot before it is added. */
-    static RemoteViews wheel(Context c, int offset, BiConsumer<RemoteViews, Apps.App> click) {
+    /** Wheel with the app at `offset` in the middle. No arrows: it is a resting picture of the wheel. */
+    static RemoteViews wheel(Context c, int offset) {
         RemoteViews v = frame(c, R.layout.widget_wheel);
-        v.setInt(R.id.up, "setColorFilter", 0xFF000000 | Prefs.text(c));
-        v.setInt(R.id.down, "setColorFilter", 0xFF000000 | Prefs.text(c));
         v.removeAllViews(R.id.slots);
         List<Apps.App> apps = Apps.list(c);
         int n = apps.size();
@@ -51,7 +48,6 @@ final class WidgetViews {
             slot.setTextViewTextSize(R.id.label, TypedValue.COMPLEX_UNIT_SP, TEXT[k] * s);
             slot.setTextColor(R.id.label, (ALPHA[k] << 24) | Prefs.text(c));
             slot.setViewVisibility(R.id.label, Prefs.labels(c) ? View.VISIBLE : View.GONE);
-            if (click != null) click.accept(slot, a);
             v.addView(R.id.slots, slot);
         }
         return v;

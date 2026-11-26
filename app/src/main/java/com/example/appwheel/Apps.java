@@ -15,6 +15,12 @@ final class Apps {
     }
 
     private static List<App> cache;
+    private static final Map<String, Bitmap> icons = new java.util.concurrent.ConcurrentHashMap<>();
+    static final int ICON_PX = 192;
+
+    static Bitmap bigIcon(Context c, App a) {
+        return icons.computeIfAbsent(a.component.flattenToString(), k -> icon(c, a, ICON_PX));
+    }
 
     /** All launchable apps sorted by name; icons are drawn only when needed. */
     static synchronized List<App> list(Context c) {
@@ -36,7 +42,10 @@ final class Apps {
         return out;
     }
 
-    static synchronized void forget() { cache = null; }
+    static synchronized void forget() {
+        cache = null;
+        icons.clear();
+    }
 
     static Bitmap icon(Context c, App a, int px) {
         Drawable d = a.info.loadIcon(c.getPackageManager());

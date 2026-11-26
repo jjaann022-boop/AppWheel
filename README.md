@@ -1,6 +1,6 @@
 # App Wheel (Android 8+)
 
-A home-screen widget that lists your apps as a **wheel** (turned with the arrows) or a
+A home-screen widget that lists your apps as a **wheel** (tap it, then swipe) or a
 **column** (swipe to scroll).
 
 Open the app, choose shape, size and colors, then tap **Add**.

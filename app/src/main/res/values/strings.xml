@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">App Wheel</string>
-    <string name="previous">Previous app</string>
-    <string name="next">Next app</string>
     <string name="cant_open">Couldn\'t open this app</string>
     <string name="add_by_hand">Long-press your home screen, tap Widgets, then pick App Wheel</string>
 </resources>

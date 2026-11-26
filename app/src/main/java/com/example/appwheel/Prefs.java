@@ -12,6 +12,7 @@ final class Prefs {
     static final String OPACITY = "opacity";    // percent
     static final String TEXT = "text";          // RGB
     static final String LABELS = "labels";
+    static final String POSITION = "position";
 
     static SharedPreferences of(Context c) {
         return c.getSharedPreferences("settings", Context.MODE_PRIVATE);
@@ -22,5 +23,6 @@ final class Prefs {
     static int bg(Context c) { return of(c).getInt(BG, 0x101418); }
     static int opacity(Context c) { return of(c).getInt(OPACITY, 70); }
     static int text(Context c) { return of(c).getInt(TEXT, 0xFFFFFF); }
+    static int position(Context c) { return of(c).getInt(POSITION, 0); }
     static boolean labels(Context c) { return of(c).getBoolean(LABELS, true); }
 }

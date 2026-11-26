@@ -22,7 +22,11 @@ public class SettingsActivity extends Activity {
     private LinearLayout form;
     private View sideCard;
     private float dp;
-    private int offset;
+    private WheelView wheel;
+    private ListView column;
+    private BaseAdapter rows;
+    private GradientDrawable columnBg;
+    private List<Apps.App> apps = new java.util.ArrayList<>();
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -52,6 +56,8 @@ public class SettingsActivity extends Activity {
         pp.setMargins(px(16), 0, px(16), px(4));
         page.addView(preview, pp);
 
+        buildPreview();
+
         form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(px(16), 0, px(16), px(12));
@@ -79,6 +85,7 @@ public class SettingsActivity extends Activity {
         show.setOnCheckedChangeListener((v, on) -> {
             Prefs.of(this).edit().putBoolean(Prefs.LABELS, on).apply();
             render();
+            rows.notifyDataSetChanged();
         });
         names.addView(show);
         colorRow(names, "Text color", Prefs.TEXT);
@@ -100,8 +107,17 @@ public class SettingsActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        Apps.forget();
-        render();
+        new Thread(() -> {
+            Apps.forget();
+            List<Apps.App> list = Apps.list(getApplicationContext());
+            for (Apps.App a : list) Apps.bigIcon(getApplicationContext(), a);
+            runOnUiThread(() -> {
+                apps = list;
+                wheel.setApps(list);
+                wheel.setPosition(Prefs.position(this));
+                rows.notifyDataSetChanged();
+            });
+        }).start();
     }
 
     @Override protected void onPause() {
@@ -118,28 +134,50 @@ public class SettingsActivity extends Activity {
         }
     }
 
-    /** Draws the preview with the same views the widget uses. */
-    private void render() {
-        sideCard.setVisibility(Prefs.shape(this) == 0 ? View.VISIBLE : View.GONE);
-        preview.removeAllViews();
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px(250), -1, Gravity.CENTER);
-        if (Prefs.shape(this) == 0) {
-            View v = WidgetViews.wheel(this, offset, null)
-                    .apply(getApplicationContext(), preview);
-            v.findViewById(R.id.up).setOnClickListener(x -> { offset--; render(); });
-            v.findViewById(R.id.down).setOnClickListener(x -> { offset++; render(); });
-            preview.addView(v, lp);
-        } else {
-            View v = WidgetViews.frame(this, R.layout.widget_preview_column)
-                    .apply(getApplicationContext(), preview);
-            ViewGroup rows = v.findViewById(R.id.rows);
-            List<Apps.App> apps = Apps.list(this);
-            for (int i = 0; i < Math.min(12, apps.size()); i++) {
-                rows.addView(WidgetViews.item(this, apps.get(i))
-                        .apply(getApplicationContext(), rows));
+    private void buildPreview() {
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px(260), -1, Gravity.CENTER);
+        wheel = new WheelView(this);
+        preview.addView(wheel, lp);
+
+        column = new ListView(this);
+        column.setDivider(null);
+        column.setVerticalScrollBarEnabled(false);
+        column.setPadding(px(6), px(6), px(6), px(6));
+        columnBg = round(0, 22);
+        column.setBackground(columnBg);
+        rows = new BaseAdapter() {
+            @Override public int getCount() { return apps.size(); }
+            @Override public Object getItem(int i) { return apps.get(i); }
+            @Override public long getItemId(int i) { return i; }
+            @Override public int getViewTypeCount() { return 3; }
+            @Override public int getItemViewType(int i) { return Prefs.size(SettingsActivity.this); }
+            @Override public View getView(int i, View old, ViewGroup parent) {
+                int[] layouts = {R.layout.widget_item_small, R.layout.widget_item,
+                        R.layout.widget_item_large};
+                View row = old != null ? old : getLayoutInflater()
+                        .inflate(layouts[Prefs.size(SettingsActivity.this)], parent, false);
+                Apps.App a = apps.get(i);
+                ((ImageView) row.findViewById(R.id.icon))
+                        .setImageBitmap(Apps.bigIcon(SettingsActivity.this, a));
+                TextView name = row.findViewById(R.id.label);
+                name.setText(a.label);
+                name.setTextColor(0xFF000000 | Prefs.text(SettingsActivity.this));
+                name.setVisibility(Prefs.labels(SettingsActivity.this) ? View.VISIBLE : View.GONE);
+                return row;
             }
-            preview.addView(v, lp);
-        }
+        };
+        column.setAdapter(rows);
+        preview.addView(column, new FrameLayout.LayoutParams(lp));
+    }
+
+    /** Restyles the preview in place; nothing is rebuilt. */
+    private void render() {
+        boolean isWheel = Prefs.shape(this) == 0;
+        sideCard.setVisibility(isWheel ? View.VISIBLE : View.GONE);
+        wheel.setVisibility(isWheel ? View.VISIBLE : View.GONE);
+        column.setVisibility(isWheel ? View.GONE : View.VISIBLE);
+        wheel.reloadStyle();
+        columnBg.setColor((Math.round(Prefs.opacity(this) * 2.55f) << 24) | Prefs.bg(this));
     }
 
     private int px(float v) { return Math.round(v * dp); }
@@ -189,7 +227,9 @@ public class SettingsActivity extends Activity {
                 Prefs.of(this).edit().putInt(key, value).apply();
                 for (TextView other : items) other.setBackground(null);
                 t.setBackground(round(ACCENT, 11));
+                if (Prefs.SIZE.equals(key)) column.setAdapter(rows);
                 render();
+                rows.notifyDataSetChanged();
             });
             items[i] = t;
             bar.addView(t, new LinearLayout.LayoutParams(0, px(40), 1));
@@ -216,6 +256,7 @@ public class SettingsActivity extends Activity {
                     Prefs.of(this).edit().putInt(key, rgb).apply();
                     paint.run();
                     render();
+                    rows.notifyDataSetChanged();
                 }));
         card.addView(line);
     }

@@ -8,10 +8,7 @@ import android.os.Build;
 import android.widget.RemoteViews;
 
 public class AppListWidget extends AppWidgetProvider {
-    private static final String TURN = "com.example.appwheel.TURN";
-
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) {
-        Apps.forget();
         for (int id : ids) draw(c, m, id);
         if (Prefs.shape(c) == 1) m.notifyAppWidgetViewDataChanged(ids, R.id.list);
     }
@@ -23,30 +20,15 @@ public class AppListWidget extends AppWidgetProvider {
     }
 
     private static void draw(Context c, AppWidgetManager m, int id) {
-        m.updateAppWidget(id, Prefs.shape(c) == 0 ? wheel(c, id) : column(c, id));
+        m.updateAppWidget(id, Prefs.shape(c) == 0 ? wheel(c) : column(c, id));
     }
 
-    private static RemoteViews wheel(Context c, int id) {
-        RemoteViews v = WidgetViews.wheel(c, Prefs.of(c).getInt("offset_" + id, 0), (slot, app) -> {
-            String cn = app.component.flattenToString();
-            Intent open = new Intent(c, LaunchActivity.class)
-                    .setData(Uri.parse("appwheel://open/" + Uri.encode(cn)))
-                    .putExtra("component", cn)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            slot.setOnClickPendingIntent(R.id.row, PendingIntent.getActivity(c, 0, open,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-        });
-        v.setOnClickPendingIntent(R.id.up, turn(c, id, -1));
-        v.setOnClickPendingIntent(R.id.down, turn(c, id, 1));
+    private static RemoteViews wheel(Context c) {
+        RemoteViews v = WidgetViews.wheel(c, Prefs.position(c));
+        v.setOnClickPendingIntent(R.id.root, PendingIntent.getActivity(c, 2,
+                new Intent(c, WheelActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         return v;
-    }
-
-    private static PendingIntent turn(Context c, int id, int by) {
-        Intent i = new Intent(c, AppListWidget.class).setAction(TURN)
-                .setData(Uri.parse("appwheel://turn/" + id + "/" + by))
-                .putExtra("id", id).putExtra("by", by);
-        return PendingIntent.getBroadcast(c, 0, i,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private static RemoteViews column(Context c, int id) {
@@ -63,19 +45,8 @@ public class AppListWidget extends AppWidgetProvider {
     }
 
     @Override public void onReceive(Context c, Intent i) {
-        if (TURN.equals(i.getAction())) {
-            int id = i.getIntExtra("id", 0);
-            String key = "offset_" + id;
-            int n = Math.max(1, Apps.list(c).size());
-            int next = Math.floorMod(Prefs.of(c).getInt(key, 0) + i.getIntExtra("by", 0), n);
-            Prefs.of(c).edit().putInt(key, next).apply();
-            draw(c, AppWidgetManager.getInstance(c), id);
-        } else {
-            super.onReceive(c, i);
-        }
-    }
-
-    @Override public void onDeleted(Context c, int[] ids) {
-        for (int id : ids) Prefs.of(c).edit().remove("offset_" + id).apply();
+        // periodic and system updates pick up newly installed apps
+        if (AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(i.getAction())) Apps.forget();
+        super.onReceive(c, i);
     }
 }
