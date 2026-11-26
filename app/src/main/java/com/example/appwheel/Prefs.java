@@ -25,4 +25,5 @@ final class Prefs {
     static int text(Context c) { return of(c).getInt(TEXT, 0xFFFFFF); }
     static int position(Context c) { return of(c).getInt(POSITION, 0); }
     static boolean labels(Context c) { return of(c).getBoolean(LABELS, true); }
+    static int bgArgb(Context c) { return (Math.round(opacity(c) * 2.55f) << 24) | bg(c); }
 }
