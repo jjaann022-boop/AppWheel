@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import java.util.List;
+import com.example.appwheel.Prefs.N;
 
 /** The swipeable wheel, opened right where the widget sits on the home screen. */
 public class WheelActivity extends Activity {
@@ -18,9 +19,11 @@ public class WheelActivity extends Activity {
 
         FrameLayout root = new FrameLayout(this);
         root.setLayoutDirection(android.view.View.LAYOUT_DIRECTION_LTR);
-        root.setBackgroundColor(0x33000000);
+        root.setBackgroundColor((Math.round(Prefs.get(this, N.DIM) * 2.55f) << 24));
         root.setOnClickListener(v -> finish());          // tap outside closes
         wheel = new WheelView(this);
+        wheel.drawPanel();
+        wheel.setAlpha(0f);
         wheel.setListener(a -> {
             Apps.launch(this, a.component);
             finish();
@@ -32,11 +35,11 @@ public class WheelActivity extends Activity {
         root.post(() -> place(root, widget));
 
         new Thread(() -> {
-            List<Apps.App> apps = Apps.list(getApplicationContext());
+            List<Apps.App> apps = Apps.visible(getApplicationContext());
             for (Apps.App a : apps) Apps.bigIcon(getApplicationContext(), a);
             runOnUiThread(() -> {
                 wheel.setApps(apps);
-                wheel.setPosition(Prefs.position(this));
+                wheel.setPosition(Prefs.get(this, N.POSITION));
                 ready = true;
             });
         }).start();
@@ -56,13 +59,21 @@ public class WheelActivity extends Activity {
         p.leftMargin = Math.max(0, Math.min(w - width, cx - width / 2));
         p.topMargin = Math.max(0, Math.min(h - height, cy - height / 2));
         wheel.setLayoutParams(p);
+        if (Prefs.on(this, N.ANIM)) {
+            wheel.setScaleX(0.85f);
+            wheel.setScaleY(0.85f);
+            wheel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(220)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+        } else {
+            wheel.setAlpha(1f);
+        }
     }
 
     @Override protected void onStop() {
         super.onStop();
         if (ready) {
             // the widget rests on the same app the wheel was left on
-            Prefs.of(this).edit().putInt(Prefs.POSITION, wheel.position()).apply();
+            Prefs.set(this, N.POSITION, wheel.position());
             AppListWidget.refreshAll(this);
         }
         if (!isChangingConfigurations()) finish();

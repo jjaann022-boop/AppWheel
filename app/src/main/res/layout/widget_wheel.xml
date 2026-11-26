@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:id="@+id/root" android:layoutDirection="ltr">
+    android:id="@+id/root" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:layoutDirection="ltr">
     <ImageView android:id="@+id/bg" android:layout_width="match_parent"
         android:layout_height="match_parent" android:scaleType="fitXY"
         android:src="@drawable/widget_bg" android:importantForAccessibility="no" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-        android:orientation="vertical" android:padding="4dp">
+        android:orientation="vertical" android:padding="6dp">
+        <FrameLayout android:id="@+id/bar_top" android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
         <LinearLayout android:id="@+id/slots" android:layout_width="match_parent"
-            android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" />
+            android:layout_height="0dp" android:layout_weight="1"
+            android:gravity="center_vertical" android:orientation="vertical" />
+        <FrameLayout android:id="@+id/bar_bottom" android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </LinearLayout>
 </FrameLayout>

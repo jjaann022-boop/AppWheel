@@ -11,7 +11,7 @@ public class ListService extends RemoteViewsService {
             private List<Apps.App> apps = new ArrayList<>();
 
             @Override public void onCreate() {}
-            @Override public void onDataSetChanged() { apps = Apps.list(c); }
+            @Override public void onDataSetChanged() { apps = Apps.visible(c); }
             @Override public void onDestroy() {}
             @Override public int getCount() { return apps.size(); }
 
@@ -25,7 +25,7 @@ public class ListService extends RemoteViewsService {
             }
 
             @Override public RemoteViews getLoadingView() { return null; }
-            @Override public int getViewTypeCount() { return 3; }
+            @Override public int getViewTypeCount() { return 1; }
             @Override public long getItemId(int pos) { return pos; }
             @Override public boolean hasStableIds() { return false; }
         };

@@ -6,24 +6,22 @@ import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import java.text.Collator;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 final class Apps {
     static final class App {
         String label;
         ComponentName component;
         ResolveInfo info;
+        long installed;
     }
 
-    private static List<App> cache;
-    private static final Map<String, Bitmap> icons = new java.util.concurrent.ConcurrentHashMap<>();
     static final int ICON_PX = 192;
+    private static List<App> cache;
+    private static final Map<String, Bitmap> icons = new ConcurrentHashMap<>();
 
-    static Bitmap bigIcon(Context c, App a) {
-        return icons.computeIfAbsent(a.component.flattenToString(), k -> icon(c, a, ICON_PX));
-    }
-
-    /** All launchable apps sorted by name; icons are drawn only when needed. */
-    static synchronized List<App> list(Context c) {
+    /** Every launchable app. */
+    static synchronized List<App> all(Context c) {
         if (cache != null) return cache;
         PackageManager pm = c.getPackageManager();
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
@@ -34,6 +32,11 @@ final class Apps {
             a.info = r;
             a.label = r.loadLabel(pm).toString();
             a.component = new ComponentName(r.activityInfo.packageName, r.activityInfo.name);
+            try {
+                a.installed = pm.getPackageInfo(r.activityInfo.packageName, 0).firstInstallTime;
+            } catch (PackageManager.NameNotFoundException ignored) {
+                a.installed = 0;
+            }
             out.add(a);
         }
         Collator col = Collator.getInstance();
@@ -42,17 +45,38 @@ final class Apps {
         return out;
     }
 
+    /** The apps the user chose to show, in the chosen order. */
+    static List<App> visible(Context c) {
+        Set<String> hidden = Prefs.hidden(c);
+        List<App> out = new ArrayList<>();
+        for (App a : all(c)) {
+            if (!hidden.contains(a.component.flattenToString())) out.add(a);
+        }
+        int sort = Prefs.get(c, Prefs.N.SORT);
+        if (sort == 1) Collections.reverse(out);
+        if (sort == 2) out.sort((x, y) -> Long.compare(y.installed, x.installed));
+        return out;
+    }
+
     static synchronized void forget() {
         cache = null;
         icons.clear();
     }
 
+    static Bitmap bigIcon(Context c, App a) {
+        return icons.computeIfAbsent(a.component.flattenToString(), k -> {
+            Drawable d = a.info.loadIcon(c.getPackageManager());
+            Bitmap b = Bitmap.createBitmap(ICON_PX, ICON_PX, Bitmap.Config.ARGB_8888);
+            d.setBounds(0, 0, ICON_PX, ICON_PX);
+            d.draw(new Canvas(b));
+            return b;
+        });
+    }
+
+    /** A copy at exactly `px`, so a wrap_content ImageView shows it at that size. */
     static Bitmap icon(Context c, App a, int px) {
-        Drawable d = a.info.loadIcon(c.getPackageManager());
-        Bitmap b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
+        Bitmap b = Bitmap.createScaledBitmap(bigIcon(c, a), px, px, true);
         b.setDensity(c.getResources().getDisplayMetrics().densityDpi);
-        d.setBounds(0, 0, px, px);
-        d.draw(new Canvas(b));
         return b;
     }
 

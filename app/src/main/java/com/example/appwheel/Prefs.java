@@ -2,28 +2,47 @@ package com.example.appwheel;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import java.util.HashSet;
+import java.util.Set;
 
-/** User choices, shared by the settings screen and the widget. */
+/** User choices, shared by the settings screen, the widget and the wheel. */
 final class Prefs {
-    static final String SHAPE = "shape";        // 0 wheel, 1 column
-    static final String SIDE = "side";          // 0 right, 1 left
-    static final String SIZE = "size";          // 0 small, 1 medium, 2 large
-    static final String BG = "bg";              // RGB
-    static final String OPACITY = "opacity";    // percent
-    static final String TEXT = "text";          // RGB
-    static final String LABELS = "labels";
-    static final String POSITION = "position";
+    // key and default of every number setting
+    enum N {
+        SHAPE(0), SIDE(0), COUNT(1), ICON(100), TEXT_SIZE(100), SPACING(6), CURVE(44),
+        BG(0x101418), OPACITY(70), TEXT(0xFFFFFF), CORNERS(2),
+        BAR(0), ANIM(1), ANIM_SPEED(1),
+        SORT(0), SPIN(100), DIM(20),
+        LABELS(1), BOLD(0), HAPTIC(1),
+        BTN_ARROWS(1), BTN_WHEEL(1), BTN_REFRESH(0), BTN_SETTINGS(1),
+        POSITION(0);
+
+        final int fallback;
+        N(int fallback) { this.fallback = fallback; }
+        String key() { return "n_" + name(); }
+    }
 
     static SharedPreferences of(Context c) {
         return c.getSharedPreferences("settings", Context.MODE_PRIVATE);
     }
-    static int shape(Context c) { return of(c).getInt(SHAPE, 0); }
-    static int side(Context c) { return of(c).getInt(SIDE, 0); }
-    static int size(Context c) { return of(c).getInt(SIZE, 1); }
-    static int bg(Context c) { return of(c).getInt(BG, 0x101418); }
-    static int opacity(Context c) { return of(c).getInt(OPACITY, 70); }
-    static int text(Context c) { return of(c).getInt(TEXT, 0xFFFFFF); }
-    static int position(Context c) { return of(c).getInt(POSITION, 0); }
-    static boolean labels(Context c) { return of(c).getBoolean(LABELS, true); }
-    static int bgArgb(Context c) { return (Math.round(opacity(c) * 2.55f) << 24) | bg(c); }
+    static int get(Context c, N n) { return of(c).getInt(n.key(), n.fallback); }
+    static boolean on(Context c, N n) { return get(c, n) != 0; }
+    static void set(Context c, N n, int value) { of(c).edit().putInt(n.key(), value).apply(); }
+
+    static String title(Context c) { return of(c).getString("title", ""); }
+    static void setTitle(Context c, String s) { of(c).edit().putString("title", s).apply(); }
+
+    static Set<String> hidden(Context c) {
+        return new HashSet<>(of(c).getStringSet("hidden", new HashSet<>()));
+    }
+    static void setHidden(Context c, Set<String> s) { of(c).edit().putStringSet("hidden", s).apply(); }
+
+    static int argb(Context c, N color) { return 0xFF000000 | get(c, color); }
+    static int bgArgb(Context c) {
+        return (Math.round(get(c, N.OPACITY) * 2.55f) << 24) | get(c, N.BG);
+    }
+    static int bgShape(Context c) {
+        int[] d = {R.drawable.bg_square, R.drawable.bg_soft, R.drawable.widget_bg, R.drawable.bg_pill};
+        return d[get(c, N.CORNERS)];
+    }
 }
