@@ -3,7 +3,6 @@ package com.example.appwheel;
 import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
-import android.graphics.drawable.Drawable;
 import java.text.Collator;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,17 +60,18 @@ final class Apps {
     static synchronized void forget() {
         cache = null;
         icons.clear();
+        IconStyles.forgetColors();
     }
 
     static Bitmap bigIcon(Context c, App a) {
-        return icons.computeIfAbsent(a.component.flattenToString(), k -> {
-            Drawable d = a.info.loadIcon(c.getPackageManager());
-            Bitmap b = Bitmap.createBitmap(ICON_PX, ICON_PX, Bitmap.Config.ARGB_8888);
-            d.setBounds(0, 0, ICON_PX, ICON_PX);
-            d.draw(new Canvas(b));
-            return b;
-        });
+        int style = Prefs.get(c, Prefs.N.ICON_STYLE);
+        // the "text color" look also depends on that color
+        String key = a.component.flattenToString() + "#" + style
+                + (style == 4 ? "#" + Prefs.get(c, Prefs.N.TEXT) : "");
+        return icons.computeIfAbsent(key, k -> IconStyles.render(c, a, style));
     }
+
+    static void forgetIcons() { icons.clear(); }
 
     /** A copy at exactly `px`, so a wrap_content ImageView shows it at that size. */
     static Bitmap icon(Context c, App a, int px) {

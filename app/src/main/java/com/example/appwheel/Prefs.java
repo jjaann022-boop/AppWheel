@@ -15,6 +15,7 @@ final class Prefs {
         SORT(0), SPIN(100), DIM(20),
         LABELS(1), BOLD(0), HAPTIC(1),
         BTN_ARROWS(1), BTN_WHEEL(1), BTN_REFRESH(0), BTN_SETTINGS(1),
+        ICON_STYLE(0),
         POSITION(0);
 
         final int fallback;

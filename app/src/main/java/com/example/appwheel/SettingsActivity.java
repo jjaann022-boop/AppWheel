@@ -40,6 +40,7 @@ public class SettingsActivity extends Activity {
     private List<Apps.App> all = new ArrayList<>();
     private List<Apps.App> shown = new ArrayList<>();
     private int tab;
+    private int iconFamily = -1;
     private float dp;
 
     @Override protected void onCreate(Bundle b) {
@@ -62,7 +63,7 @@ public class SettingsActivity extends Activity {
 
         page.addView(buildPreview(), margins(-1, px(260), 16, 0, 16, 10));
 
-        LinearLayout tabs = pills(new String[] {"Layout", "Style", "Widget", "Apps"}, tab, i -> {
+        LinearLayout tabs = pills(new String[] {"Layout", "Icons", "Style", "Widget", "Apps"}, tab, i -> {
             if (i == tab) return;
             int direction = i > tab ? 1 : -1;
             tab = i;
@@ -101,7 +102,7 @@ public class SettingsActivity extends Activity {
             runOnUiThread(() -> {
                 all = list;
                 reloadApps();
-                if (tab == 3) buildPage();
+                if (tab == 1 || tab == 4) buildPage();
             });
         }).start();
     }
@@ -220,8 +221,9 @@ public class SettingsActivity extends Activity {
     private void buildPage() {
         form.removeAllViews();
         if (tab == 0) layoutPage();
-        else if (tab == 1) stylePage();
-        else if (tab == 2) widgetPage();
+        else if (tab == 1) iconsPage();
+        else if (tab == 2) stylePage();
+        else if (tab == 3) widgetPage();
         else appsPage();
     }
 
@@ -246,6 +248,84 @@ public class SettingsActivity extends Activity {
         LinearLayout sizes = card("Sizes");
         slider(sizes, "Icon size", N.ICON, 60, 150, "%");
         slider(sizes, "Space between apps", N.SPACING, 0, 30, " dp");
+    }
+
+    private void iconsPage() {
+        int current = Prefs.get(this, N.ICON_STYLE);
+        if (iconFamily < 0) iconFamily = current / 100;
+        int total = 0;
+        for (int i = 0; i < IconStyles.FAMILIES.length; i++) total += IconStyles.count(i);
+        LinearLayout card = card(total + " icon styles");
+        LinearLayout holder = new LinearLayout(this);
+        holder.setOrientation(LinearLayout.VERTICAL);
+        card.addView(pills(IconStyles.FAMILIES, iconFamily, i -> {
+            iconFamily = i;
+            holder.animate().alpha(0f).setDuration(100).withEndAction(() -> {
+                fillIcons(holder);
+                holder.animate().alpha(1f).setDuration(200).start();
+            }).start();
+        }));
+        card.addView(holder, margins(-1, -2, 0, 10, 0, 0));
+        fillIcons(holder);
+        card("Tip").addView(label("Color, Letter and Outline use each app's main color. "
+                + "Icon size is in the Layout tab.", 14, WHITE));
+    }
+
+    /** A grid of live thumbnails, drawn from one of the user's own apps. */
+    private void fillIcons(LinearLayout holder) {
+        holder.removeAllViews();
+        if (all.isEmpty()) {
+            holder.addView(label("Loading apps…", 14, MUTED));
+            return;
+        }
+        // prefer a colorful, familiar app as the sample
+        Apps.App sample = all.get(0);
+        for (Apps.App a : all) {
+            String pkg = a.component.getPackageName();
+            if (pkg.equals("com.android.chrome") || pkg.equals("com.whatsapp")) sample = a;
+        }
+        List<FrameLayout> cells = new ArrayList<>();
+        LinearLayout line = null;
+        for (int i = 0; i < IconStyles.count(iconFamily); i++) {
+            if (i % 4 == 0) {
+                line = new LinearLayout(this);
+                holder.addView(line, new LinearLayout.LayoutParams(-1, -2));
+            }
+            final int style = iconFamily * 100 + i;
+            LinearLayout cell = new LinearLayout(this);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER_HORIZONTAL);
+            cell.setPadding(0, px(8), 0, px(6));
+            ImageView image = new ImageView(this);
+            image.setImageBitmap(IconStyles.render(this, sample, style));
+            cell.addView(image, new LinearLayout.LayoutParams(px(44), px(44)));
+            TextView name = label(IconStyles.name(iconFamily, i), 11, WHITE);
+            name.setSingleLine(true);
+            name.setGravity(Gravity.CENTER);
+            name.setPadding(0, px(4), 0, 0);
+            cell.addView(name);
+            FrameLayout frame = new FrameLayout(this);
+            frame.addView(cell);
+            frame.setContentDescription(IconStyles.name(iconFamily, i));
+            frame.setBackground(Prefs.get(this, N.ICON_STYLE) == style ? round(ACCENT, 14) : null);
+            frame.setOnClickListener(v -> {
+                Prefs.set(this, N.ICON_STYLE, style);
+                Apps.forgetIcons();
+                for (FrameLayout other : cells) other.setBackground(null);
+                frame.setBackground(round(ACCENT, 14));
+                v.setScaleX(0.85f);
+                v.setScaleY(0.85f);
+                v.animate().scaleX(1f).scaleY(1f).setDuration(220).start();
+                render();
+                wheel.invalidate();
+            });
+            cells.add(frame);
+            line.addView(frame, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        // keep the last row's cells the same width as the others
+        while (line != null && line.getChildCount() < 4) {
+            line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
+        }
     }
 
     private void stylePage() {

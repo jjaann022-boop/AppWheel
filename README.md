@@ -3,6 +3,7 @@
 A home-screen widget showing your apps as a **wheel** or a **column**.
 
 - Shape, wheel side, curve, number of apps, icon size and spacing
+- 90 icon styles: system, original, shaped, app-color dots, letters, outlines
 - Themes, full color picker, opacity, corners, text style
 - Optional button bar (up, down, open wheel, refresh, settings) with a title
 - Animations, swipe-wheel speed, vibration
