@@ -16,7 +16,7 @@ public class WheelActivity extends Activity {
             @Override public void onDismiss() { finish(); }
         });
         setContentView(wheel);
-        int px = Math.round(64 * getResources().getDisplayMetrics().density);
+        int px = Math.round(80 * getResources().getDisplayMetrics().density);
         new Thread(() -> {
             List<Apps.App> apps = Apps.load(getApplicationContext(), px);
             runOnUiThread(() -> wheel.setApps(apps));

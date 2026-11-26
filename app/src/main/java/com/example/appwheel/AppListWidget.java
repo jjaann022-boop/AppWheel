@@ -23,6 +23,11 @@ public class AppListWidget extends AppWidgetProvider {
                     new Intent(c, LaunchActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     PendingIntent.FLAG_UPDATE_CURRENT | mutable));
 
+            v.setInt(R.id.bg, "setColorFilter", 0xFF000000 | Prefs.bg(c));
+            v.setInt(R.id.bg, "setImageAlpha", Math.round(Prefs.opacity(c) * 2.55f));
+            v.setTextColor(R.id.open_wheel, 0xFF000000 | Prefs.text(c));
+            v.setTextColor(R.id.refresh, 0xFF000000 | Prefs.text(c));
+
             v.setOnClickPendingIntent(R.id.open_wheel, PendingIntent.getActivity(c, 1,
                     new Intent(c, WheelActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
@@ -36,10 +41,15 @@ public class AppListWidget extends AppWidgetProvider {
         m.notifyAppWidgetViewDataChanged(ids, R.id.list);
     }
 
+    static void refreshAll(Context c) {
+        AppWidgetManager m = AppWidgetManager.getInstance(c);
+        int[] ids = m.getAppWidgetIds(new ComponentName(c, AppListWidget.class));
+        if (ids.length > 0) new AppListWidget().onUpdate(c, m, ids);
+    }
+
     @Override public void onReceive(Context c, Intent i) {
         if (REFRESH.equals(i.getAction())) {
-            AppWidgetManager m = AppWidgetManager.getInstance(c);
-            onUpdate(c, m, m.getAppWidgetIds(new ComponentName(c, AppListWidget.class)));
+            refreshAll(c);
         } else {
             super.onReceive(c, i);
         }
