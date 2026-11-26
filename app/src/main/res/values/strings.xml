@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">عجلة التطبيقات</string>
+    <string name="open_wheel">◎ العجلة</string>
+    <string name="refresh">تحديث</string>
+    <string name="cant_open">تعذّر فتح التطبيق</string>
+</resources>
