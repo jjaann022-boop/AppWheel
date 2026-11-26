@@ -1,70 +1,107 @@
 package com.example.appwheel;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.*;
 import java.util.List;
 
-/** Home screen of the app: every change shows in the preview and is saved at once. */
+/** Home screen of the app: preview on top, options in cards, "Add" at the bottom. */
 public class SettingsActivity extends Activity {
-    private static final int[] BG_COLORS =
-            {0x101418, 0x000000, 0xFFFFFF, 0x1D3557, 0x2A9D8F, 0x6A4C93, 0x9B2226, 0x5C4033};
-    private static final int[] TEXT_COLORS =
-            {0xFFFFFF, 0x000000, 0xFFD166, 0x90E0EF, 0xB7E4C7, 0xFFAFCC};
+    private static final int PAGE = 0xFF0F1115, CARD = 0xFF1A1D24, CHIP = 0xFF272B35;
+    private static final int ACCENT = 0xFF6C63FF, MUTED = 0xFF9AA0AE, WHITE = 0xFFFFFFFF;
 
-    private WheelView preview;
+    private FrameLayout preview;
     private LinearLayout form;
+    private View sideCard;
     private float dp;
+    private int offset;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         dp = getResources().getDisplayMetrics().density;
+        getWindow().setStatusBarColor(PAGE);
+        getWindow().setNavigationBarColor(PAGE);
 
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        page.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        page.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        page.setBackgroundColor(PAGE);
         page.setFitsSystemWindows(true);
 
-        // the preview stays put while the options scroll under it
-        preview = new WheelView(this);
-        page.addView(preview, new LinearLayout.LayoutParams(-1, 0, 2));
+        TextView title = label(getString(R.string.app_name), 24, WHITE);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setPadding(px(20), px(14), px(20), px(10));
+        page.addView(title);
+
+        // stands in for the wallpaper behind the widget
+        preview = new FrameLayout(this);
+        GradientDrawable wallpaper = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[] {0xFF3A4A7A, 0xFF7A4A72});
+        wallpaper.setCornerRadius(px(24));
+        preview.setBackground(wallpaper);
+        preview.setPadding(px(12), px(12), px(12), px(12));
+        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-1, px(270));
+        pp.setMargins(px(16), 0, px(16), px(4));
+        page.addView(preview, pp);
 
         form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(px(16), px(4), px(16), px(24));
+        form.setPadding(px(16), 0, px(16), px(12));
         ScrollView scroll = new ScrollView(this);
         scroll.addView(form);
-        page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 3));
+        page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        choice(R.string.shape, Prefs.SHAPE, Prefs.shape(this), R.string.wheel, R.string.column);
-        choice(R.string.side, Prefs.SIDE, Prefs.side(this), R.string.right, R.string.left);
-        choice(R.string.size, Prefs.SIZE, Prefs.size(this),
-                R.string.small, R.string.medium, R.string.large);
-        colors(R.string.bg_color, Prefs.BG, BG_COLORS, Prefs.bg(this));
-        opacity();
-        colors(R.string.text_color, Prefs.TEXT, TEXT_COLORS, Prefs.text(this));
-        toggle(R.string.show_labels, Prefs.LABELS, Prefs.labels(this));
-        toggle(R.string.haptic, Prefs.HAPTIC, Prefs.haptic(this));
+        segments(card("Shape"), Prefs.SHAPE, Prefs.shape(this), "Wheel", "Column");
+        LinearLayout side = card("Wheel side");
+        sideCard = side;
+        segments(side, Prefs.SIDE, Prefs.side(this), "Left side", "Right side");
+        segments(card("Size"), Prefs.SIZE, Prefs.size(this), "Small", "Medium", "Large");
 
-        Button open = new Button(this);
-        open.setText(R.string.try_full);
-        open.setOnClickListener(v -> startActivity(new Intent(this, WheelActivity.class)));
-        form.addView(open);
-        note(R.string.widget_note);
+        LinearLayout bg = card("Background");
+        colorRow(bg, "Color", Prefs.BG);
+        opacity(bg);
+
+        LinearLayout names = card("App names");
+        Switch show = new Switch(this);
+        show.setText("Show names");
+        show.setTextColor(WHITE);
+        show.setTextSize(15);
+        show.setChecked(Prefs.labels(this));
+        show.setPadding(0, px(4), 0, px(10));
+        show.setOnCheckedChangeListener((v, on) -> {
+            Prefs.of(this).edit().putBoolean(Prefs.LABELS, on).apply();
+            render();
+        });
+        names.addView(show);
+        colorRow(names, "Text color", Prefs.TEXT);
+
+        TextView add = label("Add", 18, WHITE);
+        add.setTypeface(Typeface.DEFAULT_BOLD);
+        add.setGravity(Gravity.CENTER);
+        add.setBackground(round(ACCENT, 28));
+        add.setClickable(true);
+        add.setFocusable(true);
+        add.setOnClickListener(v -> addWidget());
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, px(56));
+        ap.setMargins(px(16), px(8), px(16), px(14));
+        page.addView(add, ap);
 
         setContentView(page);
+        render();
+    }
 
-        int iconPx = px(80);
-        new Thread(() -> {
-            List<Apps.App> apps = Apps.load(getApplicationContext(), iconPx);
-            runOnUiThread(() -> preview.setApps(apps));
-        }).start();
+    @Override protected void onResume() {
+        super.onResume();
+        Apps.forget();
+        render();
     }
 
     @Override protected void onPause() {
@@ -72,105 +109,137 @@ public class SettingsActivity extends Activity {
         AppListWidget.refreshAll(this);
     }
 
-    private int px(int v) { return Math.round(v * dp); }
-
-    private void title(int res) {
-        TextView t = new TextView(this);
-        t.setText(res);
-        t.setTextSize(16);
-        t.setPadding(0, px(14), 0, px(6));
-        form.addView(t);
-    }
-
-    private void note(int res) {
-        TextView t = new TextView(this);
-        t.setText(res);
-        t.setPadding(0, px(10), 0, 0);
-        form.addView(t);
-    }
-
-    private void save(String key, int value) {
-        Prefs.of(this).edit().putInt(key, value).apply();
-        preview.reloadStyle();
-    }
-
-    private void choice(int heading, String key, int current, int... names) {
-        title(heading);
-        RadioGroup group = new RadioGroup(this);
-        group.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 0; i < names.length; i++) {
-            final int value = i;
-            RadioButton r = new RadioButton(this);
-            r.setId(View.generateViewId());
-            r.setText(names[i]);
-            r.setPadding(0, 0, px(18), 0);
-            group.addView(r);
-            if (i == current) group.check(r.getId());
-            r.setOnClickListener(v -> save(key, value));
+    private void addWidget() {
+        AppWidgetManager m = AppWidgetManager.getInstance(this);
+        boolean asked = m.isRequestPinAppWidgetSupported() && m.requestPinAppWidget(
+                new ComponentName(this, AppListWidget.class), null, null);
+        if (!asked) {
+            Toast.makeText(this, R.string.add_by_hand, Toast.LENGTH_LONG).show();
         }
-        form.addView(group);
     }
 
-    private void colors(int heading, String key, int[] options, int current) {
-        title(heading);
-        LinearLayout line = new LinearLayout(this);
-        View[] dots = new View[options.length];
-        for (int i = 0; i < options.length; i++) {
-            final int rgb = options[i];
-            View dot = new View(this);
-            dot.setBackground(swatch(rgb, rgb == current));
-            dot.setContentDescription(String.format("#%06X", rgb));
-            dot.setOnClickListener(v -> {
-                save(key, rgb);
-                for (int k = 0; k < dots.length; k++) {
-                    dots[k].setBackground(swatch(options[k], options[k] == rgb));
-                }
-            });
-            dots[i] = dot;
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(px(36), px(36));
-            p.setMarginEnd(px(10));
-            line.addView(dot, p);
+    /** Draws the preview with the same views the widget uses. */
+    private void render() {
+        sideCard.setVisibility(Prefs.shape(this) == 0 ? View.VISIBLE : View.GONE);
+        preview.removeAllViews();
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px(250), -1, Gravity.CENTER);
+        if (Prefs.shape(this) == 0) {
+            View v = WidgetViews.wheel(this, offset, null)
+                    .apply(getApplicationContext(), preview);
+            v.findViewById(R.id.up).setOnClickListener(x -> { offset--; render(); });
+            v.findViewById(R.id.down).setOnClickListener(x -> { offset++; render(); });
+            preview.addView(v, lp);
+        } else {
+            View v = WidgetViews.frame(this, R.layout.widget_preview_column)
+                    .apply(getApplicationContext(), preview);
+            ViewGroup rows = v.findViewById(R.id.rows);
+            List<Apps.App> apps = Apps.list(this);
+            for (int i = 0; i < Math.min(12, apps.size()); i++) {
+                rows.addView(WidgetViews.item(this, apps.get(i))
+                        .apply(getApplicationContext(), rows));
+            }
+            preview.addView(v, lp);
         }
-        HorizontalScrollView h = new HorizontalScrollView(this);
-        h.addView(line);
-        form.addView(h);
     }
 
-    private GradientDrawable swatch(int rgb, boolean selected) {
+    private int px(float v) { return Math.round(v * dp); }
+
+    private GradientDrawable round(int color, int radius) {
         GradientDrawable d = new GradientDrawable();
-        d.setShape(GradientDrawable.OVAL);
-        d.setColor(0xFF000000 | rgb);
-        d.setStroke(px(selected ? 4 : 1), selected ? 0xFFFF8800 : Color.GRAY);
+        d.setColor(color);
+        d.setCornerRadius(px(radius));
         return d;
     }
 
-    private void opacity() {
-        title(R.string.opacity);
+    private TextView label(String s, int sp, int color) {
+        TextView t = new TextView(this);
+        t.setText(s);
+        t.setTextSize(sp);
+        t.setTextColor(color);
+        return t;
+    }
+
+    private LinearLayout card(String heading) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(round(CARD, 20));
+        card.setPadding(px(16), px(12), px(16), px(14));
+        TextView h = label(heading, 13, MUTED);
+        h.setPadding(0, 0, 0, px(8));
+        card.addView(h);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.topMargin = px(10);
+        form.addView(card, p);
+        return card;
+    }
+
+    private void segments(LinearLayout card, String key, int current, String... names) {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setBackground(round(CHIP, 14));
+        bar.setPadding(px(4), px(4), px(4), px(4));
+        TextView[] items = new TextView[names.length];
+        // "Left side" is shown first but stored as 1
+        boolean mirrored = Prefs.SIDE.equals(key);
+        for (int i = 0; i < names.length; i++) {
+            final int value = mirrored ? 1 - i : i;
+            TextView t = label(names[i], 15, WHITE);
+            t.setGravity(Gravity.CENTER);
+            t.setBackground(value == current ? round(ACCENT, 11) : null);
+            t.setOnClickListener(v -> {
+                Prefs.of(this).edit().putInt(key, value).apply();
+                for (TextView other : items) other.setBackground(null);
+                t.setBackground(round(ACCENT, 11));
+                render();
+            });
+            items[i] = t;
+            bar.addView(t, new LinearLayout.LayoutParams(0, px(40), 1));
+        }
+        card.addView(bar);
+    }
+
+    private void colorRow(LinearLayout card, String name, String key) {
+        LinearLayout line = new LinearLayout(this);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        line.addView(label(name, 15, WHITE), new LinearLayout.LayoutParams(0, -2, 1));
+        View dot = new View(this);
+        Runnable paint = () -> {
+            boolean isBg = Prefs.BG.equals(key);
+            GradientDrawable d = round(0xFF000000 | (isBg ? Prefs.bg(this) : Prefs.text(this)), 18);
+            d.setStroke(px(2), MUTED);
+            dot.setBackground(d);
+        };
+        paint.run();
+        line.addView(dot, new LinearLayout.LayoutParams(px(36), px(36)));
+        line.setMinimumHeight(px(44));
+        line.setOnClickListener(v -> ColorPicker.show(this, name,
+                Prefs.BG.equals(key) ? Prefs.bg(this) : Prefs.text(this), rgb -> {
+                    Prefs.of(this).edit().putInt(key, rgb).apply();
+                    paint.run();
+                    render();
+                }));
+        card.addView(line);
+    }
+
+    private void opacity(LinearLayout card) {
+        TextView value = label("", 15, WHITE);
+        value.setPadding(0, px(8), 0, px(4));
+        value.setText("Opacity  " + Prefs.opacity(this) + "%");
+        card.addView(value);
         SeekBar bar = new SeekBar(this);
         bar.setMax(100);
         bar.setProgress(Prefs.opacity(this));
-        bar.setProgressTintList(ColorStateList.valueOf(0xFF2A9D8F));
+        bar.setProgressTintList(ColorStateList.valueOf(ACCENT));
+        bar.setThumbTintList(ColorStateList.valueOf(ACCENT));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
-                if (user) save(Prefs.OPACITY, v);
+                if (!user) return;
+                Prefs.of(SettingsActivity.this).edit().putInt(Prefs.OPACITY, v).apply();
+                value.setText("Opacity  " + v + "%");
+                render();
             }
             @Override public void onStartTrackingTouch(SeekBar s) {}
             @Override public void onStopTrackingTouch(SeekBar s) {}
         });
-        form.addView(bar);
-    }
-
-    private void toggle(int label, String key, boolean current) {
-        Switch s = new Switch(this);
-        s.setText(label);
-        s.setTextSize(16);
-        s.setChecked(current);
-        s.setGravity(Gravity.CENTER_VERTICAL);
-        s.setPadding(0, px(14), 0, 0);
-        s.setOnCheckedChangeListener((v, on) -> {
-            Prefs.of(this).edit().putBoolean(key, on).apply();
-            preview.reloadStyle();
-        });
-        form.addView(s);
+        card.addView(bar);
     }
 }

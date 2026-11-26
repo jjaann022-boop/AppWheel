@@ -11,28 +11,40 @@ final class Apps {
     static final class App {
         String label;
         ComponentName component;
-        Bitmap icon;
+        ResolveInfo info;
     }
 
-    /** All launchable apps, sorted by name. Call off the main thread. */
-    static List<App> load(Context c, int iconPx) {
+    private static List<App> cache;
+
+    /** All launchable apps sorted by name; icons are drawn only when needed. */
+    static synchronized List<App> list(Context c) {
+        if (cache != null) return cache;
         PackageManager pm = c.getPackageManager();
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
         List<App> out = new ArrayList<>();
         for (ResolveInfo r : pm.queryIntentActivities(query, 0)) {
             if (r.activityInfo.packageName.equals(c.getPackageName())) continue;
             App a = new App();
+            a.info = r;
             a.label = r.loadLabel(pm).toString();
             a.component = new ComponentName(r.activityInfo.packageName, r.activityInfo.name);
-            Drawable d = r.loadIcon(pm);
-            a.icon = Bitmap.createBitmap(iconPx, iconPx, Bitmap.Config.ARGB_8888);
-            d.setBounds(0, 0, iconPx, iconPx);
-            d.draw(new Canvas(a.icon));
             out.add(a);
         }
         Collator col = Collator.getInstance();
         out.sort((x, y) -> col.compare(x.label, y.label));
+        cache = out;
         return out;
+    }
+
+    static synchronized void forget() { cache = null; }
+
+    static Bitmap icon(Context c, App a, int px) {
+        Drawable d = a.info.loadIcon(c.getPackageManager());
+        Bitmap b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
+        b.setDensity(c.getResources().getDisplayMetrics().densityDpi);
+        d.setBounds(0, 0, px, px);
+        d.draw(new Canvas(b));
+        return b;
     }
 
     static void launch(Context c, ComponentName cn) {

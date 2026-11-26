@@ -1,24 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">عجلة التطبيقات</string>
-    <string name="open_wheel">◎ العجلة</string>
-    <string name="refresh">تحديث</string>
-    <string name="cant_open">تعذّر فتح التطبيق</string>
-    <string name="shape">شكل القائمة (عند فتحها)</string>
-    <string name="wheel">عجلة</string>
-    <string name="column">عمودية</string>
-    <string name="side">الجهة</string>
-    <string name="right">يمين</string>
-    <string name="left">يسار</string>
-    <string name="size">الحجم</string>
-    <string name="small">صغير</string>
-    <string name="medium">وسط</string>
-    <string name="large">كبير</string>
-    <string name="bg_color">لون الخلفية</string>
-    <string name="opacity">عتامة الخلفية</string>
-    <string name="text_color">لون الكتابة</string>
-    <string name="show_labels">إظهار أسماء التطبيقات</string>
-    <string name="haptic">اهتزاز عند التمرير</string>
-    <string name="try_full">تجربة بملء الشاشة</string>
-    <string name="widget_note">الألوان والحجم والأسماء تنطبق على الويدجت أيضاً. الشكل والجهة والاهتزاز تخص القائمة المفتوحة بملء الشاشة.</string>
+    <string name="app_name">App Wheel</string>
+    <string name="previous">Previous app</string>
+    <string name="next">Next app</string>
+    <string name="cant_open">Couldn\'t open this app</string>
+    <string name="add_by_hand">Long-press your home screen, tap Widgets, then pick App Wheel</string>
 </resources>

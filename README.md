@@ -1,15 +1,8 @@
-# عجلة التطبيقات (أندرويد 8 وأحدث)
+# App Wheel (Android 8+)
 
-## بناء الـ APK
-**Android Studio:** افتح المجلد، انتظر المزامنة، ثم Build > Build APK(s).
+A home-screen widget that lists your apps as a **wheel** (turned with the arrows) or a
+**column** (swipe to scroll).
 
-**GitHub (بدون تثبيت أدوات):** أنشئ مستودعاً وارفع محتويات المجلد (وفيها المجلد المخفي `.github`)،
-ثم افتح تبويب Actions > Build APK، وبعد انتهاء البناء نزّل `AppWheel-apk` وفك ضغطه.
+Open the app, choose shape, size and colors, then tap **Add**.
 
-## الاستخدام
-افتح أيقونة التطبيق لتغيير الشكل والجهة والحجم والألوان.
-
-1. ثبّت الـ APK على الموبايل.
-2. اضغط مطولاً على الشاشة الرئيسية > الأدوات (Widgets) > عجلة التطبيقات.
-3. مرّر القائمة، أو اضغط "العجلة". الضغط على مكان فارغ يغلقها.
-4. بعد تثبيت أو حذف تطبيق اضغط ↻ لتحديث القائمة.
+The APK is built by GitHub Actions: Actions > Build APK > download `AppWheel-apk`.

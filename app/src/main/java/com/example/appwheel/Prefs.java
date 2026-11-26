@@ -3,16 +3,15 @@ package com.example.appwheel;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/** User choices, shared by the settings screen, the wheel and the widget. */
+/** User choices, shared by the settings screen and the widget. */
 final class Prefs {
-    static final String SHAPE = "shape";            // 0 wheel, 1 straight column
-    static final String SIDE = "side";              // 0 right, 1 left
-    static final String SIZE = "size";              // 0 small, 1 medium, 2 large
-    static final String BG = "bg";                  // RGB
-    static final String OPACITY = "opacity";        // percent
-    static final String TEXT = "text";              // RGB
+    static final String SHAPE = "shape";        // 0 wheel, 1 column
+    static final String SIDE = "side";          // 0 right, 1 left
+    static final String SIZE = "size";          // 0 small, 1 medium, 2 large
+    static final String BG = "bg";              // RGB
+    static final String OPACITY = "opacity";    // percent
+    static final String TEXT = "text";          // RGB
     static final String LABELS = "labels";
-    static final String HAPTIC = "haptic";
 
     static SharedPreferences of(Context c) {
         return c.getSharedPreferences("settings", Context.MODE_PRIVATE);
@@ -24,7 +23,4 @@ final class Prefs {
     static int opacity(Context c) { return of(c).getInt(OPACITY, 70); }
     static int text(Context c) { return of(c).getInt(TEXT, 0xFFFFFF); }
     static boolean labels(Context c) { return of(c).getBoolean(LABELS, true); }
-    static boolean haptic(Context c) { return of(c).getBoolean(HAPTIC, true); }
-
-    static int bgArgb(Context c) { return (Math.round(opacity(c) * 2.55f) << 24) | bg(c); }
 }
